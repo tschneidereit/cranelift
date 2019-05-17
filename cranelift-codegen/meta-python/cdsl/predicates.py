@@ -248,6 +248,19 @@ class FieldPredicate(object):
             .format(self.function, ', '.join(args))
 
 
+class IsZeroInt(FieldPredicate):
+    """
+    Instruction predicate that checks if an immediate instruction format field
+    is zero.
+
+    :param field: `FormatField` to be checked.
+    """
+
+    def __init__(self, field):
+        # type: (FormatField) -> None
+        super(IsZeroInt, self).__init__(field, 'is_zero', ())
+
+
 class IsEqual(FieldPredicate):
     """
     Instruction predicate that checks if an immediate instruction format field

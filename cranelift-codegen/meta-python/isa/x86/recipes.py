@@ -4,7 +4,7 @@ x86 Encoding recipes.
 from __future__ import absolute_import
 from cdsl.isa import EncRecipe
 from cdsl.predicates import IsSignedInt, IsEqual, Or
-from cdsl.predicates import IsZero32BitFloat, IsZero64BitFloat
+from cdsl.predicates import IsZeroInt, IsZero32BitFloat, IsZero64BitFloat
 from cdsl.registers import RegClass
 from base.formats import Unary, UnaryIeee32, UnaryIeee64, UnaryImm, UnaryBool
 from base.formats import Binary, BinaryImm
@@ -574,6 +574,33 @@ pu_iq = TailRecipe(
         PUT_OP(bits | (out_reg0 & 7), rex1(out_reg0), sink);
         let imm: i64 = imm.into();
         sink.put8(imm as u64);
+        ''')
+
+# XX+rd id unary with 32-bit immediate. Note no recipe predicate.
+u_id_z = TailRecipe(
+        'u_id_z', UnaryImm, base_size=1, ins=(), outs=GPR,
+        instp=IsZeroInt(UnaryImm.imm),
+        emit='''
+        PUT_OP(bits, rex2(out_reg0, out_reg0), sink);
+        modrm_rr(out_reg0, out_reg0, sink);
+        ''')
+
+# XX+rd id unary with bool immediate. Note no recipe predicate.
+u_id_bool_z = TailRecipe(
+        'u_id_bool_z', UnaryBool, base_size=1, ins=(), outs=GPR,
+        instp=IsZeroInt(UnaryBool.imm),
+        emit='''
+        PUT_OP(bits, rex2(out_reg0, out_reg0), sink);
+        modrm_rr(out_reg0, out_reg0, sink);
+        ''')
+
+# XX+rd iq unary with 64-bit immediate.
+u_iq_z = TailRecipe(
+        'u_iq_z', UnaryImm, base_size=1, ins=(), outs=GPR,
+        instp=IsZeroInt(UnaryImm.imm),
+        emit='''
+        PUT_OP(bits, rex2(out_reg0, out_reg0), sink);
+        modrm_rr(out_reg0, out_reg0, sink);
         ''')
 
 # XX /n Unary with floating point 32-bit immediate equal to zero.

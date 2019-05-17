@@ -25,6 +25,12 @@ pub fn is_zero_32_bit_float<T: Into<ir::immediates::Ieee32>>(x: T) -> bool {
     x32.bits() == 0
 }
 
+/// Check that `x` is zero.
+#[allow(dead_code)]
+pub fn is_zero<T: Into<i64>>(x: T) -> bool {
+    x.into() == 0
+}
+
 /// Check that `x` is the same as `y`.
 #[allow(dead_code)]
 pub fn is_equal<T: Eq + Copy, O: Into<T> + Copy>(x: T, y: O) -> bool {

@@ -1,4 +1,4 @@
-; Check that floating-point constants equal to zero are optimized correctly.
+; Check that floating-point and integer constants equal to zero are optimized correctly.
 test binemit
 target x86_64
 
@@ -30,3 +30,15 @@ ebb0:
   return v1
 }
 
+function %imm_zero_integer() -> i64 fast {
+ebb0:
+  ; asm: xor %eax, %eax
+  [-,%rax]     v0 = iconst.i64 0     ; bin: 40 31 c0
+  ; asm; xor %eax, %eax
+  [-,%rax]     v1 = iconst.i32 0     ; bin: 40 31 c0
+  ; asm: xor %r8, %r8
+  [-,%r8]     v2 = iconst.i64 0     ; bin: 45 31 c0
+  ; asm: xor %r15, %r15
+  [-,%r15]     v3 = iconst.i64 0     ; bin: 45 31 ff
+  return v0
+}

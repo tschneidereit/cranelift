@@ -198,8 +198,17 @@ for inst,               rrr in [
 # TODO: band_imm.i64 with an unsigned 32-bit immediate can be encoded as
 # band_imm.i32. Can even use the single-byte immediate for 0xffff_ffXX masks.
 
+# 32-bit rules for iconst variants with immediate 0.
+X86_32.enc(base.iconst.i32, *r.u_id_z(0x31))
+
 # Immediate constants.
 X86_32.enc(base.iconst.i32, *r.pu_id(0xb8))
+
+# 64-bit rules for iconst variants with immediate 0.
+X86_64.enc(base.iconst.i32, *r.u_id_z.rex(0x31))
+X86_64.enc(base.iconst.i32, *r.u_id_z(0x31))
+X86_64.enc(base.iconst.i64, *r.u_iq_z.rex(0x31))
+X86_64.enc(base.iconst.i64, *r.u_iq_z(0x31))
 
 X86_64.enc(base.iconst.i32, *r.pu_id.rex(0xb8))
 X86_64.enc(base.iconst.i32, *r.pu_id(0xb8))
@@ -212,6 +221,9 @@ X86_64.enc(base.iconst.i64, *r.pu_id(0xb8),
 X86_64.enc(base.iconst.i64, *r.u_id.rex(0xc7, rrr=0, w=1))
 # Finally, the 0xb8 opcode takes an 8-byte immediate with a REX.W prefix.
 X86_64.enc(base.iconst.i64, *r.pu_iq.rex(0xb8, w=1))
+
+# bool 0 can be written as an xor rather than mov.
+enc_both(base.bconst.b1, r.u_id_bool_z, 0x30)
 
 # bool constants.
 enc_both(base.bconst.b1, r.pu_id_bool, 0xb8)
