@@ -219,7 +219,7 @@ fn get_or_create<'a>(
                         // If this is a call, get the return value affinity.
                         func.dfg
                             .call_signature(inst)
-                            .map(|sig| Affinity::abi(&func.dfg.signatures[sig].returns[rnum], isa))
+                            .map(|sig| Affinity::abi(&func.dfg.signatures[sig].returns[rnum]))
                     })
                     .unwrap_or_default();
             }
@@ -228,7 +228,7 @@ fn get_or_create<'a>(
                 if func.layout.entry_block() == Some(ebb) {
                     // The affinity for entry block parameters can be inferred from the function
                     // signature.
-                    affinity = Affinity::abi(&func.signature.params[num], isa);
+                    affinity = Affinity::abi(&func.signature.params[num]);
                 } else {
                     // Give normal EBB parameters a register affinity matching their type.
                     let rc = isa.regclass_for_abi_type(func.dfg.value_type(value));
@@ -426,7 +426,7 @@ impl Liveness {
                     encinfo.operand_constraints(encoding).map_or(&[], |c| c.ins);
                 let mut operand_constraints = operand_constraint_slice.iter();
 
-                for &arg in func.dfg.inst_args(inst) {
+                for (i, &arg) in func.dfg.inst_args(inst).iter().enumerate() {
                     // Get the live range, create it as a dead range if necessary.
                     let lr = get_or_create(&mut self.ranges, arg, isa, func, &encinfo);
 
@@ -446,6 +446,12 @@ impl Liveness {
                     // EBB arguments or call/return ABI arguments.
                     if let Some(constraint) = operand_constraints.next() {
                         lr.affinity.merge(constraint, &reginfo);
+                    }
+
+                    let call_sig = func.dfg.call_signature(inst);
+                    if let Some(sig) = call_sig {
+                        let params = &func.dfg.signatures[sig].params;
+                        // lr.affinity = Affinity::abi(&params[i]);
                     }
                 }
             }

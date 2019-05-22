@@ -256,6 +256,31 @@ impl<'a> Context<'a> {
 
         for (lv, abi) in args.iter().zip(&sig.params) {
             match lv.affinity {
+                Affinity::RegUnit(unit) => {
+                    if let ArgumentLoc::Reg(reg) = abi.location {
+                        if unit == reg {
+                            if !lv.is_dead {
+                                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
+                                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                                    .iter()
+                                    .find(|&rc| rc.contains(unit))
+                                    .expect("reg unit should be in a toprc");
+                                regs.take(rc, reg, lv.is_local);
+                            }
+                            self.cur.func.locations[lv.value] = ValueLoc::Reg(reg);
+                        } else {
+                            panic!("uh oh, this is not good");
+                        }
+                    } else {
+                        // This should have been fixed by the reload pass.
+                        panic!(
+                            "Entry arg {} has {} affinity, but ABI {}",
+                            lv.value,
+                            lv.affinity.display(&self.reginfo),
+                            abi.display(&self.reginfo)
+                        );
+                    }
+                },
                 Affinity::Reg(rci) => {
                     let rc = self.reginfo.rc(rci);
                     if let ArgumentLoc::Reg(reg) = abi.location {
@@ -365,7 +390,28 @@ impl<'a> Context<'a> {
 
         // Get rid of the killed values.
         for lv in kills {
-            if let Affinity::Reg(rci) = lv.affinity {
+            if let Affinity::RegUnit(unit) = lv.affinity {
+                let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
+                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                    .iter()
+                    .find(|&rc| rc.contains(unit))
+                    .expect("reg unit should be in a toprc");
+                debug!(
+                    "    kill {} in {} ({} {})",
+                    lv.value,
+                    self.reginfo.display_regunit(unit),
+                    if lv.is_local { "local" } else { "global" },
+                    rc
+                );
+                self.solver.add_kill(lv.value, rc, unit);
+
+                // Update the global register set which has no diversions.
+                if !lv.is_local {
+                    regs.global
+                        .free(rc, self.cur.func.locations[lv.value].unwrap_reg());
+                }
+
+            } else if let Affinity::Reg(rci) = lv.affinity {
                 let rc = self.reginfo.rc(rci);
                 let reg = self.divert.reg(lv.value, &self.cur.func.locations);
                 debug!(
@@ -744,7 +790,23 @@ impl<'a> Context<'a> {
         for (i, lv) in defs.iter().enumerate() {
             let abi = self.cur.func.dfg.signatures[sig].returns[i];
             if let ArgumentLoc::Reg(reg) = abi.location {
-                if let Affinity::Reg(rci) = lv.affinity {
+                if let Affinity::RegUnit(unit) = lv.affinity {
+                    let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
+                    let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                        .iter()
+                        .find(|&rc| rc.contains(unit))
+                        .expect("reg unit should be in a toprc");
+                    self.add_fixed_output(lv.value, rc, reg, throughs);
+                    if !lv.is_local && !global_regs.is_avail(rc, reg) {
+                        debug!(
+                            "ABI output {} in {}:{} is not available in global regs",
+                            lv.value,
+                            rc,
+                            self.reginfo.display_regunit(reg)
+                        );
+                        *replace_global_defines = true;
+                    }
+                } else if let Affinity::Reg(rci) = lv.affinity {
                     let rc = self.reginfo.rc(rci);
                     self.add_fixed_output(lv.value, rc, reg, throughs);
                     if !lv.is_local && !global_regs.is_avail(rc, reg) {
