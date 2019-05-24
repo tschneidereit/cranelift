@@ -451,7 +451,7 @@ impl Liveness {
                     let call_sig = func.dfg.call_signature(inst);
                     if let Some(sig) = call_sig {
                         let params = &func.dfg.signatures[sig].params;
-                        // lr.affinity = Affinity::abi(&params[i]);
+                        lr.affinity = Affinity::abi(&params[i]);
                     }
                 }
             }
