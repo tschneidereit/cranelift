@@ -152,9 +152,8 @@ impl<'a> Context<'a> {
         for lv in regs {
             if !lv.is_dead {
                 if let Affinity::RegUnit(unit) = lv.affinity {
-                    self.pressure.take(
-                        toprc_containing_regunit(unit, &self.reginfo)
-                    );
+                    self.pressure
+                        .take(toprc_containing_regunit(unit, &self.reginfo));
                 } else if let Affinity::Reg(rci) = lv.affinity {
                     let rc = self.reginfo.rc(rci);
                     self.pressure.take(rc);
@@ -168,9 +167,8 @@ impl<'a> Context<'a> {
         for lv in kills {
             if let Affinity::RegUnit(unit) = lv.affinity {
                 if !self.spills.contains(&lv.value) {
-                    self.pressure.free(
-                        toprc_containing_regunit(unit, &self.reginfo)
-                    );
+                    self.pressure
+                        .free(toprc_containing_regunit(unit, &self.reginfo));
                 }
             } else if let Affinity::Reg(rci) = lv.affinity {
                 if !self.spills.contains(&lv.value) {
@@ -187,9 +185,8 @@ impl<'a> Context<'a> {
             if lv.is_dead {
                 if let Affinity::RegUnit(unit) = lv.affinity {
                     if !self.spills.contains(&lv.value) {
-                        self.pressure.free(
-                            toprc_containing_regunit(unit, &self.reginfo)
-                        );
+                        self.pressure
+                            .free(toprc_containing_regunit(unit, &self.reginfo));
                     }
                 } else if let Affinity::Reg(rci) = lv.affinity {
                     if !self.spills.contains(&lv.value) {
@@ -439,7 +436,7 @@ impl<'a> Context<'a> {
                     Affinity::RegUnit(_unit) => (
                         // TODO: Bring up in review
                         self.cur.isa.regclass_for_abi_type(abi.value_type).into(),
-                        false
+                        false,
                     ),
                     Affinity::Stack => (
                         self.cur.isa.regclass_for_abi_type(abi.value_type).into(),
@@ -585,7 +582,7 @@ impl<'a> Context<'a> {
                 self.pressure.free(rc);
                 self.spills.push(value);
                 debug!("Spilled {}:{} -> {}", value, rc, self.pressure);
-            },
+            }
             Affinity::Reg(rci) => {
                 let rc = self.reginfo.rc(rci);
                 self.pressure.free(rc);

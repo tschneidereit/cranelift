@@ -228,7 +228,8 @@ impl<'a> Context<'a> {
             );
             if let Affinity::RegUnit(reg) = lv.affinity {
                 let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                let rc = self.reginfo.classes
+                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                     .iter()
                     .find(|&rc| rc.contains(reg))
                     .expect("reg unit should be in a toprc");
@@ -275,7 +276,8 @@ impl<'a> Context<'a> {
                         if unit == reg {
                             if !lv.is_dead {
                                 let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                                let rc = self.reginfo.classes
+                                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                                     .iter()
                                     .find(|&rc| rc.contains(unit))
                                     .expect("reg unit should be in a toprc");
@@ -290,7 +292,8 @@ impl<'a> Context<'a> {
                             // just use the affinity'd reg anyway?.
                             if !lv.is_dead {
                                 let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                                let rc = self.reginfo.classes
+                                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                                     .iter()
                                     .find(|&rc| rc.contains(reg))
                                     .expect("reg unit should be in a toprc");
@@ -307,7 +310,7 @@ impl<'a> Context<'a> {
                             abi.display(&self.reginfo)
                         );
                     }
-                },
+                }
                 Affinity::Reg(rci) => {
                     let rc = self.reginfo.rc(rci);
                     if let ArgumentLoc::Reg(reg) = abi.location {
@@ -419,7 +422,8 @@ impl<'a> Context<'a> {
         for lv in kills {
             if let Affinity::RegUnit(unit) = lv.affinity {
                 let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
-                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                let rc = self.reginfo.classes
+                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                     .iter()
                     .find(|&rc| rc.contains(unit))
                     .expect("reg unit should be in a toprc");
@@ -438,7 +442,6 @@ impl<'a> Context<'a> {
                     regs.global
                         .free(rc, self.cur.func.locations[lv.value].unwrap_reg());
                 }
-
             } else if let Affinity::Reg(rci) = lv.affinity {
                 let rc = self.reginfo.rc(rci);
                 let reg = self.divert.reg(lv.value, &self.cur.func.locations);
@@ -556,7 +559,8 @@ impl<'a> Context<'a> {
 
             if let Affinity::RegUnit(reg) = lv.affinity {
                 let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                let rc = self.reginfo.classes
+                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                     .iter()
                     .find(|&rc| rc.contains(reg))
                     .expect("reg unit should be in a toprc");
@@ -701,7 +705,8 @@ impl<'a> Context<'a> {
                     // registers by reassigning `br_arg`.
                     if let Affinity::RegUnit(reg) = self.liveness[br_arg].affinity {
                         let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                        let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                        let rc = self.reginfo.classes
+                            [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                             .iter()
                             .find(|&rc| rc.contains(reg))
                             .expect("reg unit should be in a toprc");
@@ -763,7 +768,8 @@ impl<'a> Context<'a> {
             if pred(lr, self.liveness.context(&self.cur.func.layout)) {
                 if let Affinity::RegUnit(reg) = lr.affinity {
                     let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                    let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                    let rc = self.reginfo.classes
+                        [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                         .iter()
                         .find(|&rc| rc.contains(reg))
                         .expect("reg unit should be in a toprc");
@@ -802,7 +808,8 @@ impl<'a> Context<'a> {
         for lv in live {
             if let Affinity::RegUnit(unit) = lv.affinity {
                 let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
-                let toprc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                let toprc = self.reginfo.classes
+                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                     .iter()
                     .find(|&rc| rc.contains(unit))
                     .expect("reg unit should be in a toprc");
@@ -870,7 +877,8 @@ impl<'a> Context<'a> {
             if let ArgumentLoc::Reg(reg) = abi.location {
                 if let Affinity::RegUnit(unit) = lv.affinity {
                     let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                    let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                    let rc = self.reginfo.classes
+                        [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                         .iter()
                         .find(|&rc| rc.contains(unit))
                         .expect("reg unit should be in a toprc");
@@ -916,7 +924,8 @@ impl<'a> Context<'a> {
             for lv in throughs {
                 if let Affinity::RegUnit(unit) = lv.affinity {
                     let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
-                    let toprc2 = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                    let toprc2 = self.reginfo.classes
+                        [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                         .iter()
                         .find(|&rc| rc.contains(unit))
                         .expect("reg unit should be in a toprc");
@@ -1055,7 +1064,8 @@ impl<'a> Context<'a> {
                 }
             } else if let Affinity::RegUnit(reg) = lv.affinity {
                 let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                let rc = self.reginfo.classes
+                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
                     .iter()
                     .find(|&rc| rc.contains(reg))
                     .expect("reg unit should be in a toprc");
@@ -1280,7 +1290,9 @@ fn program_input_abi(
 ) {
     for (abi, &value) in abi_types.iter().zip(func.dfg.inst_variable_args(inst)) {
         if let ArgumentLoc::Reg(reg) = abi.location {
-            let lr = liveness.get(value).expect("ABI register must have live range");
+            let lr = liveness
+                .get(value)
+                .expect("ABI register must have live range");
             if let Affinity::RegUnit(unit) = lr.affinity {
                 let bank = reginfo.bank_containing_regunit(unit).unwrap();
                 let rc = reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]

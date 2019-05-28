@@ -14,8 +14,8 @@ use crate::dominator_tree::DominatorTree;
 use crate::entity::{SparseMap, SparseMapValue};
 use crate::ir::{AbiParam, ArgumentLoc, InstBuilder};
 use crate::ir::{Ebb, Function, Inst, InstructionData, Opcode, Value};
-use crate::isa::{RegClass, RegUnit};
 use crate::isa::{ConstraintKind, EncInfo, Encoding, RecipeConstraints, TargetIsa};
+use crate::isa::{RegClass, RegUnit};
 use crate::regalloc::affinity::Affinity;
 use crate::regalloc::live_value_tracker::{LiveValue, LiveValueTracker};
 use crate::regalloc::liveness::Liveness;
@@ -313,7 +313,7 @@ impl<'a> Context<'a> {
             // Create a live range for the new reload.
             let affinity = match cand.reg {
                 (_regclass, Some(reg)) => Affinity::RegUnit(reg),
-                (regclass, None) => Affinity::Reg(regclass.into())
+                (regclass, None) => Affinity::Reg(regclass.into()),
             };
             self.liveness.create_dead(reg, fill, affinity);
             self.liveness
@@ -458,8 +458,8 @@ fn handle_abi_args(
                             Some(reg)
                         } else {
                             None
-                        }
-                    )
+                        },
+                    ),
                 });
             }
         }

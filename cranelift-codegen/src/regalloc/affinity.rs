@@ -45,14 +45,11 @@ impl Affinity {
     pub fn new(constraint: &OperandConstraint) -> Self {
         match constraint.kind {
             ConstraintKind::Stack => Affinity::Stack,
-            ConstraintKind::FixedReg(unit) |
-            ConstraintKind::FixedTied(unit) => {
-//                Affinity::Reg(constraint.regclass.into())
+            ConstraintKind::FixedReg(unit) | ConstraintKind::FixedTied(unit) => {
+                //                Affinity::Reg(constraint.regclass.into())
                 Affinity::RegUnit(unit)
-            },
-            _ => {
-                Affinity::Reg(constraint.regclass.into())
             }
+            _ => Affinity::Reg(constraint.regclass.into()),
         }
     }
 
@@ -76,8 +73,7 @@ impl Affinity {
     /// Is this the `Reg` affinity?
     pub fn is_reg(self) -> bool {
         match self {
-            Affinity::RegUnit(_) |
-            Affinity::Reg(_) => true,
+            Affinity::RegUnit(_) | Affinity::Reg(_) => true,
             _ => false,
         }
     }
