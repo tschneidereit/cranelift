@@ -283,7 +283,20 @@ impl<'a> Context<'a> {
                             }
                             self.cur.func.locations[lv.value] = ValueLoc::Reg(reg);
                         } else {
-                            panic!("uh oh, this is not good");
+                            // TODO: what does this mean? A value is assigned somewhere by the ABI
+                            // that disagrees with its affinity?
+                            // thought that this would mean we should use what was assigned, but
+                            // that results in invalid registers for value constraints. So fr now
+                            // just use the affinity'd reg anyway?.
+                            if !lv.is_dead {
+                                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
+                                let rc = self.reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
+                                    .iter()
+                                    .find(|&rc| rc.contains(reg))
+                                    .expect("reg unit should be in a toprc");
+                                regs.take(rc, reg, lv.is_local);
+                            }
+                            self.cur.func.locations[lv.value] = ValueLoc::Reg(reg);
                         }
                     } else {
                         // This should have been fixed by the reload pass.
