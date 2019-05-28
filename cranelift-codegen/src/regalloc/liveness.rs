@@ -450,8 +450,15 @@ impl Liveness {
 
                     let call_sig = func.dfg.call_signature(inst);
                     if let Some(sig) = call_sig {
-                        let params = &func.dfg.signatures[sig].params;
-                        lr.affinity = Affinity::abi(&params[i]);
+                        if let crate::ir::InstructionData::CallIndirect { .. } = func.dfg[inst] {
+                            if i > 0 {
+                                let params = &func.dfg.signatures[sig].params;
+                                lr.affinity = Affinity::abi(&params[i - 1]);
+                            }
+                        } else {
+                            let params = &func.dfg.signatures[sig].params;
+                            lr.affinity = Affinity::abi(&params[i]);
+                        }
                     }
                 }
             }
