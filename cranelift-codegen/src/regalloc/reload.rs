@@ -284,8 +284,7 @@ impl<'a> Context<'a> {
                 );
                 if lv.affinity.is_stack() {
                     let reg = self.cur.func.dfg.replace_result(lv.value, abi.value_type);
-                    self.liveness
-                        .create_dead(reg, inst, Affinity::abi(&abi));
+                    self.liveness.create_dead(reg, inst, Affinity::abi(&abi));
                     self.insert_spill(ebb, lv.value, reg);
                 }
             }
