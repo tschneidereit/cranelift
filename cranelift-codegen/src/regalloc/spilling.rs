@@ -18,7 +18,7 @@
 use crate::cursor::{Cursor, EncCursor};
 use crate::dominator_tree::DominatorTree;
 use crate::ir::{ArgumentLoc, Ebb, Function, Inst, InstBuilder, SigRef, Value, ValueLoc};
-use crate::isa::registers::{RegClass, RegClassIndex, RegClassMask, RegUnit};
+use crate::isa::registers::{RegClassIndex, RegClassMask};
 use crate::isa::{ConstraintKind, EncInfo, RecipeConstraints, RegInfo, TargetIsa};
 use crate::regalloc::affinity::Affinity;
 use crate::regalloc::live_value_tracker::{LiveValue, LiveValueTracker};
@@ -30,15 +30,6 @@ use crate::topo_order::TopoOrder;
 use core::fmt;
 use log::debug;
 use std::vec::Vec;
-
-/// Return a top-level register class which contains `unit`.
-fn toprc_containing_regunit(unit: RegUnit, reginfo: &RegInfo) -> RegClass {
-    let bank = reginfo.bank_containing_regunit(unit).unwrap();
-    reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-        .iter()
-        .find(|&rc| rc.contains(unit))
-        .expect("reg unit should be in a toprc")
-}
 
 /// Persistent data structures for the spilling pass.
 pub struct Spilling {
@@ -153,7 +144,7 @@ impl<'a> Context<'a> {
             if !lv.is_dead {
                 if let Affinity::RegUnit(unit) = lv.affinity {
                     self.pressure
-                        .take(toprc_containing_regunit(unit, &self.reginfo));
+                        .take(self.reginfo.toprc_containing_regunit(unit));
                 } else if let Affinity::Reg(rci) = lv.affinity {
                     let rc = self.reginfo.rc(rci);
                     self.pressure.take(rc);
@@ -168,7 +159,7 @@ impl<'a> Context<'a> {
             if let Affinity::RegUnit(unit) = lv.affinity {
                 if !self.spills.contains(&lv.value) {
                     self.pressure
-                        .free(toprc_containing_regunit(unit, &self.reginfo));
+                        .free(self.reginfo.toprc_containing_regunit(unit));
                 }
             } else if let Affinity::Reg(rci) = lv.affinity {
                 if !self.spills.contains(&lv.value) {
@@ -186,7 +177,7 @@ impl<'a> Context<'a> {
                 if let Affinity::RegUnit(unit) = lv.affinity {
                     if !self.spills.contains(&lv.value) {
                         self.pressure
-                            .free(toprc_containing_regunit(unit, &self.reginfo));
+                            .free(self.reginfo.toprc_containing_regunit(unit));
                     }
                 } else if let Affinity::Reg(rci) = lv.affinity {
                     if !self.spills.contains(&lv.value) {
@@ -216,7 +207,7 @@ impl<'a> Context<'a> {
         // guaranteed to fit in registers.
         for lv in params {
             if let Affinity::RegUnit(unit) = lv.affinity {
-                let rc = toprc_containing_regunit(unit, &self.reginfo);
+                let rc = self.reginfo.toprc_containing_regunit(unit);
                 'try_take_2: while let Err(mask) = self.pressure.take_transient(rc) {
                     debug!("Need {} reg for EBB param {}", rc, lv.value);
                     match self.spill_candidate(mask, liveins) {
@@ -407,8 +398,8 @@ impl<'a> Context<'a> {
                     ArgumentLoc::Reg(unit) => unit,
                     ArgumentLoc::Stack(_) => continue,
                 };
-                let toprc = toprc_containing_regunit(unit, &self.reginfo);
-                let mut reguse = RegUse::new(arg, idx, toprc.into());
+                let mut reguse =
+                    RegUse::new(arg, idx, self.reginfo.toprc_containing_regunit(unit).into());
                 reguse.fixed = true;
 
                 debug!("  reguse: {}", reguse);
@@ -542,13 +533,12 @@ impl<'a> Context<'a> {
                 // Viable candidates are registers in one of the `mask` classes, and not already in
                 // the spill set.
                 if let Affinity::RegUnit(unit) = lv.affinity {
-                    let rc = toprc_containing_regunit(unit, &self.reginfo);
+                    let rc = self.reginfo.toprc_containing_regunit(unit);
                     if (mask & (1 << rc.toprc)) != 0 && !self.spills.contains(&lv.value) {
                         // Here, `lv` is a viable spill candidate.
                         return Some(lv.value);
                     }
-                }
-                else if let Affinity::Reg(rci) = lv.affinity {
+                } else if let Affinity::Reg(rci) = lv.affinity {
                     let rc = self.reginfo.rc(rci);
                     if (mask & (1 << rc.toprc)) != 0 && !self.spills.contains(&lv.value) {
                         // Here, `lv` is a viable spill candidate.
@@ -578,7 +568,7 @@ impl<'a> Context<'a> {
     fn spill_reg(&mut self, value: Value) {
         match self.liveness.spill(value) {
             Affinity::RegUnit(unit) => {
-                let rc = toprc_containing_regunit(unit, &self.reginfo);
+                let rc = self.reginfo.toprc_containing_regunit(unit);
                 self.pressure.free(rc);
                 self.spills.push(value);
                 debug!("Spilled {}:{} -> {}", value, rc, self.pressure);

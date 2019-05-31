@@ -227,12 +227,7 @@ impl<'a> Context<'a> {
                 self.cur.func.locations[lv.value].display(&self.reginfo)
             );
             if let Affinity::RegUnit(reg) = lv.affinity {
-                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                let rc = self.reginfo.classes
-                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                    .iter()
-                    .find(|&rc| rc.contains(reg))
-                    .expect("reg unit should be in a toprc");
+                let rc = self.reginfo.toprc_containing_regunit(reg);
                 let loc = self.cur.func.locations[lv.value];
                 match loc {
                     ValueLoc::Reg(reg) => regs.take(rc, reg, lv.is_local),
@@ -275,12 +270,7 @@ impl<'a> Context<'a> {
                     if let ArgumentLoc::Reg(reg) = abi.location {
                         if unit == reg {
                             if !lv.is_dead {
-                                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                                let rc = self.reginfo.classes
-                                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                                    .iter()
-                                    .find(|&rc| rc.contains(unit))
-                                    .expect("reg unit should be in a toprc");
+                                let rc = self.reginfo.toprc_containing_regunit(reg);
                                 regs.take(rc, reg, lv.is_local);
                             }
                             self.cur.func.locations[lv.value] = ValueLoc::Reg(reg);
@@ -291,12 +281,7 @@ impl<'a> Context<'a> {
                             // that results in invalid registers for value constraints. So fr now
                             // just use the affinity'd reg anyway?.
                             if !lv.is_dead {
-                                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                                let rc = self.reginfo.classes
-                                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                                    .iter()
-                                    .find(|&rc| rc.contains(reg))
-                                    .expect("reg unit should be in a toprc");
+                                let rc = self.reginfo.toprc_containing_regunit(reg);
                                 regs.take(rc, reg, lv.is_local);
                             }
                             self.cur.func.locations[lv.value] = ValueLoc::Reg(reg);
@@ -421,12 +406,7 @@ impl<'a> Context<'a> {
         // Get rid of the killed values.
         for lv in kills {
             if let Affinity::RegUnit(unit) = lv.affinity {
-                let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
-                let rc = self.reginfo.classes
-                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                    .iter()
-                    .find(|&rc| rc.contains(unit))
-                    .expect("reg unit should be in a toprc");
+                let rc = self.reginfo.toprc_containing_regunit(unit);
                 let reg = self.divert.reg(lv.value, &self.cur.func.locations);
                 debug!(
                     "    kill {} in {} ({} {})",
@@ -558,12 +538,7 @@ impl<'a> Context<'a> {
             );
 
             if let Affinity::RegUnit(reg) = lv.affinity {
-                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                let rc = self.reginfo.classes
-                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                    .iter()
-                    .find(|&rc| rc.contains(reg))
-                    .expect("reg unit should be in a toprc");
+                let rc = self.reginfo.toprc_containing_regunit(reg);
 
                 // Remove the dead defs.
                 if lv.endpoint == inst {
@@ -704,12 +679,7 @@ impl<'a> Context<'a> {
                     // We've branched to `dest` before. Make sure we use the correct argument
                     // registers by reassigning `br_arg`.
                     if let Affinity::RegUnit(reg) = self.liveness[br_arg].affinity {
-                        let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                        let rc = self.reginfo.classes
-                            [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                            .iter()
-                            .find(|&rc| rc.contains(reg))
-                            .expect("reg unit should be in a toprc");
+                        let rc = self.reginfo.toprc_containing_regunit(reg);
                         let br_reg = self.divert.reg(br_arg, &self.cur.func.locations);
                         self.solver.reassign_in(br_arg, rc, br_reg, dest_reg);
                     } else if let Affinity::Reg(rci) = self.liveness[br_arg].affinity {
@@ -767,12 +737,7 @@ impl<'a> Context<'a> {
                 .expect("Missing live range for diverted register");
             if pred(lr, self.liveness.context(&self.cur.func.layout)) {
                 if let Affinity::RegUnit(reg) = lr.affinity {
-                    let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                    let rc = self.reginfo.classes
-                        [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                        .iter()
-                        .find(|&rc| rc.contains(reg))
-                        .expect("reg unit should be in a toprc");
+                    let rc = self.reginfo.toprc_containing_regunit(reg);
                     // Stack diversions should not be possible here. The only live transiently
                     // during `shuffle_inputs()`.
                     self.solver.reassign_in(
@@ -807,12 +772,7 @@ impl<'a> Context<'a> {
     fn divert_fixed_input_conflicts(&mut self, live: &[LiveValue]) {
         for lv in live {
             if let Affinity::RegUnit(unit) = lv.affinity {
-                let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
-                let toprc = self.reginfo.classes
-                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                    .iter()
-                    .find(|&rc| rc.contains(unit))
-                    .expect("reg unit should be in a toprc");
+                let toprc = self.reginfo.toprc_containing_regunit(unit);
                 let reg = self.divert.reg(lv.value, &self.cur.func.locations);
                 if self.solver.is_fixed_input_conflict(toprc, reg) {
                     self.solver.add_var(lv.value, toprc, reg);
@@ -876,12 +836,7 @@ impl<'a> Context<'a> {
             let abi = self.cur.func.dfg.signatures[sig].returns[i];
             if let ArgumentLoc::Reg(reg) = abi.location {
                 if let Affinity::RegUnit(unit) = lv.affinity {
-                    let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                    let rc = self.reginfo.classes
-                        [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                        .iter()
-                        .find(|&rc| rc.contains(unit))
-                        .expect("reg unit should be in a toprc");
+                    let rc = self.reginfo.toprc_containing_regunit(unit);
                     self.add_fixed_output(lv.value, rc, reg, throughs);
                     if !lv.is_local && !global_regs.is_avail(rc, reg) {
                         debug!(
@@ -923,12 +878,7 @@ impl<'a> Context<'a> {
             // The fixed output conflicts with some of the live-through registers.
             for lv in throughs {
                 if let Affinity::RegUnit(unit) = lv.affinity {
-                    let bank = self.reginfo.bank_containing_regunit(unit).unwrap();
-                    let toprc2 = self.reginfo.classes
-                        [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                        .iter()
-                        .find(|&rc| rc.contains(unit))
-                        .expect("reg unit should be in a toprc");
+                    let toprc2 = self.reginfo.toprc_containing_regunit(unit);
                     let reg2 = self.divert.reg(lv.value, &self.cur.func.locations);
                     if regs_overlap(rc, reg, toprc2, reg2) {
                         // This live-through value is interfering with the fixed output assignment.
@@ -1063,12 +1013,7 @@ impl<'a> Context<'a> {
                     return true;
                 }
             } else if let Affinity::RegUnit(reg) = lv.affinity {
-                let bank = self.reginfo.bank_containing_regunit(reg).unwrap();
-                let rc = self.reginfo.classes
-                    [bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                    .iter()
-                    .find(|&rc| rc.contains(reg))
-                    .expect("reg unit should be in a toprc");
+                let rc = self.reginfo.toprc_containing_regunit(reg);
                 if self.solver.can_add_var(lv.value, rc, reg)
                     && !self.is_live_on_outgoing_edge(lv.value)
                 {
@@ -1294,11 +1239,7 @@ fn program_input_abi(
                 .get(value)
                 .expect("ABI register must have live range");
             if let Affinity::RegUnit(unit) = lr.affinity {
-                let bank = reginfo.bank_containing_regunit(unit).unwrap();
-                let rc = reginfo.classes[bank.first_toprc..(bank.first_toprc + bank.num_toprcs)]
-                    .iter()
-                    .find(|&rc| rc.contains(unit))
-                    .expect("reg unit should be in a toprc");
+                let rc = reginfo.toprc_containing_regunit(unit);
                 let cur_reg = divert.reg(value, &func.locations);
                 solver.reassign_in(value, rc, cur_reg, reg);
             } else if let Affinity::Reg(rci) = lr.affinity {
