@@ -46,7 +46,6 @@ impl Affinity {
         match constraint.kind {
             ConstraintKind::Stack => Affinity::Stack,
             ConstraintKind::FixedReg(unit) | ConstraintKind::FixedTied(unit) => {
-                //                Affinity::Reg(constraint.regclass.into())
                 Affinity::RegUnit(unit)
             }
             _ => Affinity::Reg(constraint.regclass.into()),
