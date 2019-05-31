@@ -548,7 +548,7 @@ impl<'a> Context<'a> {
                         return Some(lv.value);
                     }
                 }
-                if let Affinity::Reg(rci) = lv.affinity {
+                else if let Affinity::Reg(rci) = lv.affinity {
                     let rc = self.reginfo.rc(rci);
                     if (mask & (1 << rc.toprc)) != 0 && !self.spills.contains(&lv.value) {
                         // Here, `lv` is a viable spill candidate.
