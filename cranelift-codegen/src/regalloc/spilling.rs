@@ -142,11 +142,13 @@ impl<'a> Context<'a> {
     fn take_live_regs(&mut self, regs: &[LiveValue]) {
         for lv in regs {
             if !lv.is_dead {
-                if let Affinity::RegUnit(unit) = lv.affinity {
-                    self.pressure
-                        .take(self.reginfo.toprc_containing_regunit(unit));
-                } else if let Affinity::Reg(rci) = lv.affinity {
-                    let rc = self.reginfo.rc(rci);
+                let rc = match lv.affinity {
+                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
+                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    _ => None
+                };
+
+                if let Some(rc) = rc {
                     self.pressure.take(rc);
                 }
             }
@@ -156,14 +158,14 @@ impl<'a> Context<'a> {
     // Free all registers in `kills` from the pressure set.
     fn free_regs(&mut self, kills: &[LiveValue]) {
         for lv in kills {
-            if let Affinity::RegUnit(unit) = lv.affinity {
-                if !self.spills.contains(&lv.value) {
-                    self.pressure
-                        .free(self.reginfo.toprc_containing_regunit(unit));
-                }
-            } else if let Affinity::Reg(rci) = lv.affinity {
-                if !self.spills.contains(&lv.value) {
-                    let rc = self.reginfo.rc(rci);
+            if !self.spills.contains(&lv.value) {
+                let rc = match lv.affinity {
+                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
+                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    _ => None
+                };
+
+                if let Some(rc) = rc {
                     self.pressure.free(rc);
                 }
             }
@@ -173,17 +175,15 @@ impl<'a> Context<'a> {
     // Free all dead registers in `regs` from the pressure set.
     fn free_dead_regs(&mut self, regs: &[LiveValue]) {
         for lv in regs {
-            if lv.is_dead {
-                if let Affinity::RegUnit(unit) = lv.affinity {
-                    if !self.spills.contains(&lv.value) {
-                        self.pressure
-                            .free(self.reginfo.toprc_containing_regunit(unit));
-                    }
-                } else if let Affinity::Reg(rci) = lv.affinity {
-                    if !self.spills.contains(&lv.value) {
-                        let rc = self.reginfo.rc(rci);
-                        self.pressure.free(rc);
-                    }
+            if lv.is_dead && !self.spills.contains(&lv.value) {
+                let rc = match lv.affinity {
+                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
+                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    _ => None
+                };
+
+                if let Some(rc) = rc {
+                    self.pressure.free(rc);
                 }
             }
         }
@@ -206,33 +206,13 @@ impl<'a> Context<'a> {
         // An EBB can have an arbitrary (up to 2^16...) number of parameters, so they are not
         // guaranteed to fit in registers.
         for lv in params {
-            if let Affinity::RegUnit(unit) = lv.affinity {
-                let rc = self.reginfo.toprc_containing_regunit(unit);
-                'try_take_2: while let Err(mask) = self.pressure.take_transient(rc) {
-                    debug!("Need {} reg for EBB param {}", rc, lv.value);
-                    match self.spill_candidate(mask, liveins) {
-                        Some(cand) => {
-                            debug!(
-                                "Spilling live-in {} to make room for {} EBB param {}",
-                                cand, rc, lv.value
-                            );
-                            self.spill_reg(cand);
-                        }
-                        None => {
-                            // We can't spill any of the live-in registers, so we have to spill an
-                            // EBB argument. Since the current spill metric would consider all the
-                            // EBB arguments equal, just spill the present register.
-                            debug!("Spilling {} EBB argument {}", rc, lv.value);
+            let rc = match lv.affinity {
+                Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
+                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                _ => None
+            };
 
-                            // Since `spill_reg` will free a register, add the current one here.
-                            self.pressure.take(rc);
-                            self.spill_reg(lv.value);
-                            break 'try_take_2;
-                        }
-                    }
-                }
-            } else if let Affinity::Reg(rci) = lv.affinity {
-                let rc = self.reginfo.rc(rci);
+            if let Some(rc) = rc {
                 'try_take: while let Err(mask) = self.pressure.take_transient(rc) {
                     debug!("Need {} reg for EBB param {}", rc, lv.value);
                     match self.spill_candidate(mask, liveins) {
@@ -532,14 +512,13 @@ impl<'a> Context<'a> {
             .filter_map(|lv| {
                 // Viable candidates are registers in one of the `mask` classes, and not already in
                 // the spill set.
-                if let Affinity::RegUnit(unit) = lv.affinity {
-                    let rc = self.reginfo.toprc_containing_regunit(unit);
-                    if (mask & (1 << rc.toprc)) != 0 && !self.spills.contains(&lv.value) {
-                        // Here, `lv` is a viable spill candidate.
-                        return Some(lv.value);
-                    }
-                } else if let Affinity::Reg(rci) = lv.affinity {
-                    let rc = self.reginfo.rc(rci);
+                let rc = match lv.affinity {
+                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
+                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    _ => None
+                };
+
+                if let Some(rc) = rc {
                     if (mask & (1 << rc.toprc)) != 0 && !self.spills.contains(&lv.value) {
                         // Here, `lv` is a viable spill candidate.
                         return Some(lv.value);
@@ -566,18 +545,12 @@ impl<'a> Context<'a> {
     /// Note that this does not update the cached affinity in the live value tracker. Call
     /// `process_spills` to do that.
     fn spill_reg(&mut self, value: Value) {
-        match self.liveness.spill(value) {
+        let rc = match self.liveness.spill(value) {
             Affinity::RegUnit(unit) => {
-                let rc = self.reginfo.toprc_containing_regunit(unit);
-                self.pressure.free(rc);
-                self.spills.push(value);
-                debug!("Spilled {}:{} -> {}", value, rc, self.pressure);
+                self.reginfo.toprc_containing_regunit(unit)
             }
             Affinity::Reg(rci) => {
-                let rc = self.reginfo.rc(rci);
-                self.pressure.free(rc);
-                self.spills.push(value);
-                debug!("Spilled {}:{} -> {}", value, rc, self.pressure);
+                self.reginfo.rc(rci)
             }
             Affinity::Stack => {
                 panic!("Cannot spill {} that was already on the stack", value);
@@ -585,7 +558,11 @@ impl<'a> Context<'a> {
             Affinity::Unassigned => {
                 panic!("Cannot spill {} that was unassigned", value);
             }
-        }
+        };
+
+        self.pressure.free(rc);
+        self.spills.push(value);
+        debug!("Spilled {}:{} -> {}", value, rc, self.pressure);
 
         // Assign a spill slot for the whole virtual register.
         let ss = self
