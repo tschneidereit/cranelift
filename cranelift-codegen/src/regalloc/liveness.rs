@@ -426,7 +426,7 @@ impl Liveness {
                     encinfo.operand_constraints(encoding).map_or(&[], |c| c.ins);
                 let mut operand_constraints = operand_constraint_slice.iter();
 
-                for (i, &arg) in func.dfg.inst_args(inst).iter().enumerate() {
+                for &arg in func.dfg.inst_args(inst) {
                     // Get the live range, create it as a dead range if necessary.
                     let lr = get_or_create(&mut self.ranges, arg, isa, func, &encinfo);
 
@@ -447,18 +447,23 @@ impl Liveness {
                     if let Some(constraint) = operand_constraints.next() {
                         lr.affinity.merge(constraint, &reginfo);
                     }
+                }
 
-                    let call_sig = func.dfg.call_signature(inst);
-                    if let Some(sig) = call_sig {
-                        if let crate::ir::InstructionData::CallIndirect { .. } = func.dfg[inst] {
-                            if i > 0 {
-                                let params = &func.dfg.signatures[sig].params;
-                                lr.affinity = Affinity::abi(&params[i - 1]);
-                            }
-                        } else {
-                            let params = &func.dfg.signatures[sig].params;
-                            lr.affinity = Affinity::abi(&params[i]);
-                        }
+                if let Some(sig) = func.dfg.call_signature(inst) {
+                    let sig = &func.dfg.signatures[sig];
+                    let args = func.dfg.inst_variable_args(inst);
+                    if sig.params.len() != args.len() {
+                        panic!(
+                            "Assumption violated: args count == sig.params count ({} != {})",
+                            args.len(),
+                            sig.params.len()
+                        );
+                    }
+                    for (param, &arg) in sig.params.iter().zip(args.iter()) {
+                        // Safety: lr was ensured to exist through get_or_create in the above
+                        // iteration of all inst args (where inst_variable_args is a subset)
+                        let lr = self.ranges.get_mut(arg).unwrap();
+                        lr.affinity = Affinity::abi(param);
                     }
                 }
             }
