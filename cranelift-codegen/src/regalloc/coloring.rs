@@ -229,7 +229,7 @@ impl<'a> Context<'a> {
             let rc = match lv.affinity {
                 Affinity::RegUnit(reg) => Some(self.reginfo.toprc_containing_regunit(reg)),
                 Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                _ => None
+                _ => None,
             };
 
             if let Some(rc) = rc {
@@ -274,9 +274,7 @@ impl<'a> Context<'a> {
                     // just use the affinity'd reg anyway?.
                     Some(self.reginfo.toprc_containing_regunit(unit))
                 }
-                Affinity::Reg(rci) => {
-                    Some(self.reginfo.rc(rci))
-                }
+                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
                 // The spiller will have assigned an incoming stack slot already.
                 Affinity::Stack => {
                     debug_assert!(abi.location.is_stack());
@@ -284,7 +282,7 @@ impl<'a> Context<'a> {
                 }
                 // This is a ghost value, unused in the function. Don't assign it to a location
                 // either.
-                Affinity::Unassigned => { None }
+                Affinity::Unassigned => None,
             };
 
             if let Some(rc) = rc {
@@ -394,7 +392,7 @@ impl<'a> Context<'a> {
             let rc = match lv.affinity {
                 Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                 Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                _ => None
+                _ => None,
             };
 
             if let Some(rc) = rc {
@@ -514,7 +512,7 @@ impl<'a> Context<'a> {
             let rc = match lv.affinity {
                 Affinity::RegUnit(reg) => Some(self.reginfo.toprc_containing_regunit(reg)),
                 Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                _ => None
+                _ => None,
             };
 
             if let Some(rc) = rc {
@@ -646,7 +644,9 @@ impl<'a> Context<'a> {
                     let rc = match self.liveness[br_arg].affinity {
                         Affinity::RegUnit(reg) => self.reginfo.toprc_containing_regunit(reg),
                         Affinity::Reg(rci) => self.reginfo.rc(rci),
-                        _ => { panic!("Branch argument {} is not in a register", br_arg); }
+                        _ => {
+                            panic!("Branch argument {} is not in a register", br_arg);
+                        }
                     };
 
                     let br_reg = self.divert.reg(br_arg, &self.cur.func.locations);
@@ -712,12 +712,8 @@ impl<'a> Context<'a> {
 
                 // Stack diversions should not be possible here. The only live transiently
                 // during `shuffle_inputs()`.
-                self.solver.reassign_in(
-                    value,
-                    rc,
-                    rdiv.to.unwrap_reg(),
-                    rdiv.from.unwrap_reg(),
-                );
+                self.solver
+                    .reassign_in(value, rc, rdiv.to.unwrap_reg(), rdiv.from.unwrap_reg());
             }
         }
     }
@@ -729,7 +725,7 @@ impl<'a> Context<'a> {
             let toprc = match lv.affinity {
                 Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                 Affinity::Reg(rci) => Some(self.reginfo.toprc(rci)),
-                _ => None
+                _ => None,
             };
 
             if let Some(toprc) = toprc {
@@ -825,7 +821,7 @@ impl<'a> Context<'a> {
                 let toprc2 = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                     Affinity::Reg(rci) => Some(self.reginfo.toprc(rci)),
-                    _ => None
+                    _ => None,
                 };
 
                 if let Some(toprc2) = toprc2 {

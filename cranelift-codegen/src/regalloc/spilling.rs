@@ -145,7 +145,7 @@ impl<'a> Context<'a> {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                     Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None
+                    _ => None,
                 };
 
                 if let Some(rc) = rc {
@@ -162,7 +162,7 @@ impl<'a> Context<'a> {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                     Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None
+                    _ => None,
                 };
 
                 if let Some(rc) = rc {
@@ -179,7 +179,7 @@ impl<'a> Context<'a> {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                     Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None
+                    _ => None,
                 };
 
                 if let Some(rc) = rc {
@@ -209,7 +209,7 @@ impl<'a> Context<'a> {
             let rc = match lv.affinity {
                 Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                 Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                _ => None
+                _ => None,
             };
 
             if let Some(rc) = rc {
@@ -515,7 +515,7 @@ impl<'a> Context<'a> {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
                     Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None
+                    _ => None,
                 };
 
                 if let Some(rc) = rc {
@@ -546,12 +546,8 @@ impl<'a> Context<'a> {
     /// `process_spills` to do that.
     fn spill_reg(&mut self, value: Value) {
         let rc = match self.liveness.spill(value) {
-            Affinity::RegUnit(unit) => {
-                self.reginfo.toprc_containing_regunit(unit)
-            }
-            Affinity::Reg(rci) => {
-                self.reginfo.rc(rci)
-            }
+            Affinity::RegUnit(unit) => self.reginfo.toprc_containing_regunit(unit),
+            Affinity::Reg(rci) => self.reginfo.rc(rci),
             Affinity::Stack => {
                 panic!("Cannot spill {} that was already on the stack", value);
             }
