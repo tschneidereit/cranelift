@@ -461,7 +461,7 @@ impl Liveness {
                     }
                     for (param, &arg) in sig.params.iter().zip(args.iter()) {
                         // Safety: lr was ensured to exist through get_or_create in the above
-                        // iteration of all inst args (where inst_variable_args is a subset)
+                        // iteration of all inst args (of which inst_variable_args is a subset)
                         let lr = self.ranges.get_mut(arg).unwrap();
                         lr.affinity = match (lr.affinity, Affinity::abi(param)) {
                             (Affinity::Unassigned, abi) => abi,
