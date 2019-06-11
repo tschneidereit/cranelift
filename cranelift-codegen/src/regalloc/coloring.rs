@@ -258,15 +258,12 @@ impl<'a> Context<'a> {
             // the RegClass for the affinity of the value we need to spill
             let rc = match lv.affinity {
                 Affinity::RegUnit(unit) => {
-                    // TODO: a test actually results in this assertion failling.
-                    // is this assertion wrong, or is the change wrong?
-                    // debug_assert!(unit == reg);
-                    //
-                    // Additionally, what does this mean? A value is assigned somewhere by
-                    // the ABI that disagrees with its affinity?
-                    // thought that this would mean we should use what was assigned, but
-                    // that results in invalid registers for value constraints. So for now
-                    // just use the affinity'd reg anyway?.
+                    // if unit != reg, we've introduced inconsistent data in that the value's
+                    // Affinity disagrees with where the value actually exists. At this point,
+                    // those two should be consistent.
+                    if let ArgumentLoc::Reg(reg) = abi.location {
+                        debug_assert!(unit == reg);
+                    }
                     Some(self.reginfo.toprc_containing_regunit(unit))
                 }
                 Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
