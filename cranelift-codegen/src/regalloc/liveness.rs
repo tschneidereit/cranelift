@@ -463,7 +463,26 @@ impl Liveness {
                         // Safety: lr was ensured to exist through get_or_create in the above
                         // iteration of all inst args (where inst_variable_args is a subset)
                         let lr = self.ranges.get_mut(arg).unwrap();
-                        lr.affinity = Affinity::abi(param);
+                        lr.affinity = match (lr.affinity, Affinity::abi(param)) {
+                            (Affinity::Unassigned, abi) => abi,
+                            (Affinity::RegClass(rci), Affinity::RegUnit(unit)) => {
+                                if reginfo.rc(rci).contains(unit) {
+                                    Affinity::RegUnit(unit)
+                                } else {
+                                    Affinity::RegClass(rci)
+                                }
+                            }
+                            (Affinity::RegClass(lr_rci), Affinity::RegClass(abi_rci)) => {
+                                if let Some(subclass) =
+                                    reginfo.rc(lr_rci).intersect_index(reginfo.rc(abi_rci))
+                                {
+                                    Affinity::RegClass(subclass)
+                                } else {
+                                    Affinity::RegClass(lr_rci)
+                                }
+                            }
+                            (lr_affinity, _) => lr_affinity,
+                        };
                     }
                 }
             }
