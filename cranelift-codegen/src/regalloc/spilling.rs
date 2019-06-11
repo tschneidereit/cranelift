@@ -316,7 +316,7 @@ impl<'a> Context<'a> {
                         reguse.fixed = true;
                         reguse.tied = !lr.killed_at(inst, ebb, ctx);
                     }
-                    ConstraintKind::Reg => {}
+                    ConstraintKind::RegClass => {}
                 }
                 if lr.affinity.is_stack() {
                     reguse.spilled = true;

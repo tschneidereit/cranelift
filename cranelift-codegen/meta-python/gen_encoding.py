@@ -800,7 +800,7 @@ def emit_operand_constraints(
                     if n in tied:
                         fmt.format('kind: ConstraintKind::Tied({}),', tied[n])
                     else:
-                        fmt.line('kind: ConstraintKind::Reg,')
+                        fmt.line('kind: ConstraintKind::RegClass,')
                     fmt.format('regclass: &{}_DATA,', cons)
                 elif isinstance(cons, Register):
                     assert n not in tied, "Can't tie fixed register operand"

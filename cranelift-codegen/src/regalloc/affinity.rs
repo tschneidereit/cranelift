@@ -109,16 +109,28 @@ impl Affinity {
         match *self {
             Affinity::Unassigned => *self = Self::new(constraint),
             Affinity::RegClass(rc) => {
-                // If the preferred register class is a subclass of the constraint, there's no need
-                // to change anything.
-                if constraint.kind != ConstraintKind::Stack && !constraint.regclass.has_subclass(rc)
-                {
-                    // If the register classes don't overlap, `intersect` returns `Unassigned`, and
-                    // we just keep our previous affinity.
-                    if let Some(subclass) = constraint.regclass.intersect_index(reginfo.rc(rc)) {
-                        // This constraint shrinks our preferred register class.
-                        *self = Affinity::RegClass(subclass);
+                match constraint.kind {
+                    ConstraintKind::RegClass => {
+                        // If the preferred register class is a subclass of the constraint, there's no need
+                        // to change anything.
+                        if !constraint.regclass.has_subclass(rc) {
+                            // If the register classes don't overlap, `intersect` returns `Unassigned`, and
+                            // we just keep our previous affinity.
+                            if let Some(subclass) =
+                                constraint.regclass.intersect_index(reginfo.rc(rc))
+                            {
+                                // This constraint shrinks our preferred register class.
+                                *self = Affinity::RegClass(subclass);
+                            }
+                        }
                     }
+                    ConstraintKind::FixedReg(reg) | ConstraintKind::FixedTied(reg) => {
+                        // If the constraint register indicates a more precise affinity, update it
+                        if reginfo.rc(rc).contains(reg) {
+                            *self = Affinity::RegUnit(reg);
+                        }
+                    }
+                    _ => {}
                 }
             }
             // Either the constraint is a stack constraint, and we would just keep this affinity,

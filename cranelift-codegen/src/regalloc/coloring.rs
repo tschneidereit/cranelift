@@ -532,7 +532,7 @@ impl<'a> Context<'a> {
                     self.solver
                         .reassign_in(value, op.regclass, cur_reg, regunit);
                 }
-                ConstraintKind::Reg | ConstraintKind::Tied(_) => {
+                ConstraintKind::RegClass | ConstraintKind::Tied(_) => {
                     if !op.regclass.contains(cur_reg) {
                         self.solver.add_var(value, op.regclass, cur_reg);
                     }
@@ -561,7 +561,7 @@ impl<'a> Context<'a> {
 
         for (op, &value) in constraints.iter().zip(self.cur.func.dfg.inst_args(inst)) {
             match op.kind {
-                ConstraintKind::Reg | ConstraintKind::Tied(_) => {
+                ConstraintKind::RegClass | ConstraintKind::Tied(_) => {
                     let cur_reg = self.divert.reg(value, &self.cur.func.locations);
                     // This is the opposite condition of `program_input_constraints()`.
                     if op.regclass.contains(cur_reg) {
@@ -726,7 +726,7 @@ impl<'a> Context<'a> {
                         *replace_global_defines = true;
                     }
                 }
-                ConstraintKind::Reg | ConstraintKind::Tied(_) | ConstraintKind::Stack => {}
+                ConstraintKind::RegClass | ConstraintKind::Tied(_) | ConstraintKind::Stack => {}
             }
         }
     }
@@ -812,7 +812,7 @@ impl<'a> Context<'a> {
                 ConstraintKind::FixedReg(_)
                 | ConstraintKind::FixedTied(_)
                 | ConstraintKind::Stack => continue,
-                ConstraintKind::Reg => {
+                ConstraintKind::RegClass => {
                     // This value has a preference for `reg`
                     if let Affinity::RegUnit(reg) = lv.affinity {
                         // And we can satisfy it
