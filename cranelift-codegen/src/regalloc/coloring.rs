@@ -1098,8 +1098,7 @@ impl<'a> Context<'a> {
     /// - Free killed registers.
     fn process_ghost_kills(&mut self, kills: &[LiveValue], regs: &mut AvailableRegs) {
         for lv in kills {
-            if let Affinity::RegClass(rci) = lv.affinity {
-                let rc = self.reginfo.rc(rci);
+            if let Some(rc) = lv.affinity.rc_in(&self.reginfo) {
                 let loc = match self.divert.remove(lv.value) {
                     Some(loc) => loc,
                     None => self.cur.func.locations[lv.value],
@@ -1109,11 +1108,6 @@ impl<'a> Context<'a> {
                     regs.global
                         .free(rc, self.cur.func.locations[lv.value].unwrap_reg());
                 }
-            } else {
-                // This is sufficient as-is to pass tests - didn't understand what causes
-                // `process_ghost_kills` and it seems tests might be missing if `RegUnit` being
-                // omitted isn't causing issues here
-                panic!("bring this up in code review");
             }
         }
     }
