@@ -144,7 +144,7 @@ impl<'a> Context<'a> {
             if !lv.is_dead {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                     _ => None,
                 };
 
@@ -161,7 +161,7 @@ impl<'a> Context<'a> {
             if !self.spills.contains(&lv.value) {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                     _ => None,
                 };
 
@@ -178,7 +178,7 @@ impl<'a> Context<'a> {
             if lv.is_dead && !self.spills.contains(&lv.value) {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                     _ => None,
                 };
 
@@ -208,7 +208,7 @@ impl<'a> Context<'a> {
         for lv in params {
             let rc = match lv.affinity {
                 Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                 _ => None,
             };
 
@@ -403,7 +403,7 @@ impl<'a> Context<'a> {
         {
             if abi.location.is_reg() {
                 let (rci, spilled) = match self.liveness[arg].affinity {
-                    Affinity::Reg(rci) => (rci, false),
+                    Affinity::RegClass(rci) => (rci, false),
                     Affinity::RegUnit(_unit) => (
                         // TODO: Bring up in review
                         self.cur.isa.regclass_for_abi_type(abi.value_type).into(),
@@ -514,7 +514,7 @@ impl<'a> Context<'a> {
                 // the spill set.
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                     _ => None,
                 };
 
@@ -547,7 +547,7 @@ impl<'a> Context<'a> {
     fn spill_reg(&mut self, value: Value) {
         let rc = match self.liveness.spill(value) {
             Affinity::RegUnit(unit) => self.reginfo.toprc_containing_regunit(unit),
-            Affinity::Reg(rci) => self.reginfo.rc(rci),
+            Affinity::RegClass(rci) => self.reginfo.rc(rci),
             Affinity::Stack => {
                 panic!("Cannot spill {} that was already on the stack", value);
             }
@@ -595,7 +595,7 @@ impl<'a> Context<'a> {
         let inst = self.cur.built_inst();
 
         // Update live ranges.
-        self.liveness.create_dead(copy, inst, Affinity::Reg(rci));
+        self.liveness.create_dead(copy, inst, Affinity::RegClass(rci));
         self.liveness.extend_locally(
             copy,
             self.cur.func.layout.pp_ebb(inst),

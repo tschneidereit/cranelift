@@ -312,7 +312,7 @@ impl<'a> Context<'a> {
             // Create a live range for the new reload.
             let affinity = match cand.reg {
                 (_regclass, Some(reg)) => Affinity::RegUnit(reg),
-                (regclass, None) => Affinity::Reg(regclass.into()),
+                (regclass, None) => Affinity::RegClass(regclass.into()),
             };
             self.liveness.create_dead(reg, fill, affinity);
             self.liveness

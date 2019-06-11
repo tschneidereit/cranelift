@@ -228,7 +228,7 @@ impl<'a> Context<'a> {
             );
             let rc = match lv.affinity {
                 Affinity::RegUnit(reg) => Some(self.reginfo.toprc_containing_regunit(reg)),
-                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                 _ => None,
             };
 
@@ -274,7 +274,7 @@ impl<'a> Context<'a> {
                     // just use the affinity'd reg anyway?.
                     Some(self.reginfo.toprc_containing_regunit(unit))
                 }
-                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                 // The spiller will have assigned an incoming stack slot already.
                 Affinity::Stack => {
                     debug_assert!(abi.location.is_stack());
@@ -391,7 +391,7 @@ impl<'a> Context<'a> {
         for lv in kills {
             let rc = match lv.affinity {
                 Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                 _ => None,
             };
 
@@ -511,7 +511,7 @@ impl<'a> Context<'a> {
 
             let rc = match lv.affinity {
                 Affinity::RegUnit(reg) => Some(self.reginfo.toprc_containing_regunit(reg)),
-                Affinity::Reg(rci) => Some(self.reginfo.rc(rci)),
+                Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
                 _ => None,
             };
 
@@ -643,7 +643,7 @@ impl<'a> Context<'a> {
                     // registers by reassigning `br_arg`.
                     let rc = match self.liveness[br_arg].affinity {
                         Affinity::RegUnit(reg) => self.reginfo.toprc_containing_regunit(reg),
-                        Affinity::Reg(rci) => self.reginfo.rc(rci),
+                        Affinity::RegClass(rci) => self.reginfo.rc(rci),
                         _ => {
                             panic!("Branch argument {} is not in a register", br_arg);
                         }
@@ -700,7 +700,7 @@ impl<'a> Context<'a> {
             if pred(lr, self.liveness.context(&self.cur.func.layout)) {
                 let rc = match lr.affinity {
                     Affinity::RegUnit(reg) => self.reginfo.toprc_containing_regunit(reg),
-                    Affinity::Reg(rci) => self.reginfo.rc(rci),
+                    Affinity::RegClass(rci) => self.reginfo.rc(rci),
                     _ => {
                         panic!(
                             "Diverted register {} with {} affinity",
@@ -724,7 +724,7 @@ impl<'a> Context<'a> {
         for lv in live {
             let toprc = match lv.affinity {
                 Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                Affinity::Reg(rci) => Some(self.reginfo.toprc(rci)),
+                Affinity::RegClass(rci) => Some(self.reginfo.toprc(rci)),
                 _ => None,
             };
 
@@ -787,7 +787,7 @@ impl<'a> Context<'a> {
             if let ArgumentLoc::Reg(reg) = abi.location {
                 let rc = match lv.affinity {
                     Affinity::RegUnit(unit) => self.reginfo.toprc_containing_regunit(unit),
-                    Affinity::Reg(rci) => self.reginfo.rc(rci),
+                    Affinity::RegClass(rci) => self.reginfo.rc(rci),
                     _ => {
                         panic!("ABI argument {} should be in a register", lv.value);
                     }
@@ -820,7 +820,7 @@ impl<'a> Context<'a> {
             for lv in throughs {
                 let toprc2 = match lv.affinity {
                     Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::Reg(rci) => Some(self.reginfo.toprc(rci)),
+                    Affinity::RegClass(rci) => Some(self.reginfo.toprc(rci)),
                     _ => None,
                 };
 
@@ -938,7 +938,7 @@ impl<'a> Context<'a> {
         debug!("Trying to add a {} reg from {} values", rc, throughs.len());
 
         for lv in throughs {
-            if let Affinity::Reg(rci) = lv.affinity {
+            if let Affinity::RegClass(rci) = lv.affinity {
                 // The new variable gets to roam the whole top-level register class because it is
                 // not actually constrained by the instruction. We just want it out of the way.
                 let toprc2 = self.reginfo.toprc(rci);
@@ -1138,7 +1138,7 @@ impl<'a> Context<'a> {
     /// - Free killed registers.
     fn process_ghost_kills(&mut self, kills: &[LiveValue], regs: &mut AvailableRegs) {
         for lv in kills {
-            if let Affinity::Reg(rci) = lv.affinity {
+            if let Affinity::RegClass(rci) = lv.affinity {
                 let rc = self.reginfo.rc(rci);
                 let loc = match self.divert.remove(lv.value) {
                     Some(loc) => loc,
@@ -1180,7 +1180,7 @@ fn program_input_abi(
                 let rc = reginfo.toprc_containing_regunit(unit);
                 let cur_reg = divert.reg(value, &func.locations);
                 solver.reassign_in(value, rc, cur_reg, reg);
-            } else if let Affinity::Reg(rci) = lr.affinity {
+            } else if let Affinity::RegClass(rci) = lr.affinity {
                 let rc = reginfo.rc(rci);
                 let cur_reg = divert.reg(value, &func.locations);
                 solver.reassign_in(value, rc, cur_reg, reg);

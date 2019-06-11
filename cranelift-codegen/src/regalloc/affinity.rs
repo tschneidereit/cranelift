@@ -25,7 +25,7 @@ pub enum Affinity {
     Stack,
 
     /// This value prefers a register from the given register class.
-    Reg(RegClassIndex),
+    RegClass(RegClassIndex),
 
     /// This value prefers a specific register unit
     RegUnit(RegUnit),
@@ -48,7 +48,7 @@ impl Affinity {
             ConstraintKind::FixedReg(unit) | ConstraintKind::FixedTied(unit) => {
                 Affinity::RegUnit(unit)
             }
-            _ => Affinity::Reg(constraint.regclass.into()),
+            _ => Affinity::RegClass(constraint.regclass.into()),
         }
     }
 
@@ -72,7 +72,7 @@ impl Affinity {
     /// Is this the `Reg` affinity?
     pub fn is_reg(self) -> bool {
         match self {
-            Affinity::RegUnit(_) | Affinity::Reg(_) => true,
+            Affinity::RegUnit(_) | Affinity::RegClass(_) => true,
             _ => false,
         }
     }
@@ -92,7 +92,7 @@ impl Affinity {
     pub fn merge(&mut self, constraint: &OperandConstraint, reginfo: &RegInfo) {
         match *self {
             Affinity::Unassigned => *self = Self::new(constraint),
-            Affinity::Reg(rc) => {
+            Affinity::RegClass(rc) => {
                 // If the preferred register class is a subclass of the constraint, there's no need
                 // to change anything.
                 if constraint.kind != ConstraintKind::Stack && !constraint.regclass.has_subclass(rc)
@@ -101,7 +101,7 @@ impl Affinity {
                     // we just keep our previous affinity.
                     if let Some(subclass) = constraint.regclass.intersect_index(reginfo.rc(rc)) {
                         // This constraint shrinks our preferred register class.
-                        *self = Affinity::Reg(subclass);
+                        *self = Affinity::RegClass(subclass);
                     }
                 }
             }
@@ -131,7 +131,7 @@ impl<'a> fmt::Display for DisplayAffinity<'a> {
         match self.0 {
             Affinity::Unassigned => write!(f, "unassigned"),
             Affinity::Stack => write!(f, "stack"),
-            Affinity::Reg(rci) => match self.1 {
+            Affinity::RegClass(rci) => match self.1 {
                 Some(regs) => write!(f, "{}", regs.rc(rci)),
                 None => write!(f, "{}", rci),
             },
