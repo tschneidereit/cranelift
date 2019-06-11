@@ -142,13 +142,7 @@ impl<'a> Context<'a> {
     fn take_live_regs(&mut self, regs: &[LiveValue]) {
         for lv in regs {
             if !lv.is_dead {
-                let rc = match lv.affinity {
-                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None,
-                };
-
-                if let Some(rc) = rc {
+                if let Some(rc) = lv.affinity.rc_in(&self.reginfo) {
                     self.pressure.take(rc);
                 }
             }
@@ -159,13 +153,7 @@ impl<'a> Context<'a> {
     fn free_regs(&mut self, kills: &[LiveValue]) {
         for lv in kills {
             if !self.spills.contains(&lv.value) {
-                let rc = match lv.affinity {
-                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None,
-                };
-
-                if let Some(rc) = rc {
+                if let Some(rc) = lv.affinity.rc_in(&self.reginfo) {
                     self.pressure.free(rc);
                 }
             }
@@ -176,13 +164,7 @@ impl<'a> Context<'a> {
     fn free_dead_regs(&mut self, regs: &[LiveValue]) {
         for lv in regs {
             if lv.is_dead && !self.spills.contains(&lv.value) {
-                let rc = match lv.affinity {
-                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None,
-                };
-
-                if let Some(rc) = rc {
+                if let Some(rc) = lv.affinity.rc_in(&self.reginfo) {
                     self.pressure.free(rc);
                 }
             }
@@ -206,13 +188,7 @@ impl<'a> Context<'a> {
         // An EBB can have an arbitrary (up to 2^16...) number of parameters, so they are not
         // guaranteed to fit in registers.
         for lv in params {
-            let rc = match lv.affinity {
-                Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
-                _ => None,
-            };
-
-            if let Some(rc) = rc {
+            if let Some(rc) = lv.affinity.rc_in(&self.reginfo) {
                 'try_take: while let Err(mask) = self.pressure.take_transient(rc) {
                     debug!("Need {} reg for EBB param {}", rc, lv.value);
                     match self.spill_candidate(mask, liveins) {
@@ -512,13 +488,7 @@ impl<'a> Context<'a> {
             .filter_map(|lv| {
                 // Viable candidates are registers in one of the `mask` classes, and not already in
                 // the spill set.
-                let rc = match lv.affinity {
-                    Affinity::RegUnit(unit) => Some(self.reginfo.toprc_containing_regunit(unit)),
-                    Affinity::RegClass(rci) => Some(self.reginfo.rc(rci)),
-                    _ => None,
-                };
-
-                if let Some(rc) = rc {
+                if let Some(rc) = lv.affinity.rc_in(&self.reginfo) {
                     if (mask & (1 << rc.toprc)) != 0 && !self.spills.contains(&lv.value) {
                         // Here, `lv` is a viable spill candidate.
                         return Some(lv.value);
@@ -545,16 +515,11 @@ impl<'a> Context<'a> {
     /// Note that this does not update the cached affinity in the live value tracker. Call
     /// `process_spills` to do that.
     fn spill_reg(&mut self, value: Value) {
-        let rc = match self.liveness.spill(value) {
-            Affinity::RegUnit(unit) => self.reginfo.toprc_containing_regunit(unit),
-            Affinity::RegClass(rci) => self.reginfo.rc(rci),
-            Affinity::Stack => {
-                panic!("Cannot spill {} that was already on the stack", value);
-            }
-            Affinity::Unassigned => {
-                panic!("Cannot spill {} that was unassigned", value);
-            }
-        };
+        let rc = self
+            .liveness
+            .spill(value)
+            .rc_in(&self.reginfo)
+            .expect("Spilled value is in a register");
 
         self.pressure.free(rc);
         self.spills.push(value);
@@ -595,7 +560,8 @@ impl<'a> Context<'a> {
         let inst = self.cur.built_inst();
 
         // Update live ranges.
-        self.liveness.create_dead(copy, inst, Affinity::RegClass(rci));
+        self.liveness
+            .create_dead(copy, inst, Affinity::RegClass(rci));
         self.liveness.extend_locally(
             copy,
             self.cur.func.layout.pp_ebb(inst),

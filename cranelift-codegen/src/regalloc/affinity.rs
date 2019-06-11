@@ -9,7 +9,7 @@
 //! larger register class instead.
 
 use crate::ir::{AbiParam, ArgumentLoc};
-use crate::isa::{ConstraintKind, OperandConstraint, RegClassIndex, RegInfo, RegUnit};
+use crate::isa::{ConstraintKind, OperandConstraint, RegClass, RegClassIndex, RegInfo, RegUnit};
 use core::fmt;
 
 /// Preferred register allocation for an SSA value.
@@ -82,6 +82,22 @@ impl Affinity {
         match self {
             Affinity::Stack => true,
             _ => false,
+        }
+    }
+
+    pub fn rc_in(&self, reginfo: &RegInfo) -> Option<RegClass> {
+        match self {
+            Affinity::RegUnit(reg) => Some(reginfo.toprc_containing_regunit(*reg)),
+            Affinity::RegClass(rci) => Some(reginfo.rc(*rci)),
+            _ => None,
+        }
+    }
+
+    pub fn toprc_in(&self, reginfo: &RegInfo) -> Option<RegClass> {
+        match self {
+            Affinity::RegUnit(reg) => Some(reginfo.toprc_containing_regunit(*reg)),
+            Affinity::RegClass(rci) => Some(reginfo.toprc(*rci)),
+            _ => None,
         }
     }
 
