@@ -906,7 +906,8 @@ impl<'a> Context<'a> {
                 }
             } else if let Affinity::RegUnit(reg) = lv.affinity {
                 let rc = self.reginfo.toprc_containing_regunit(reg);
-                Some((rc, reg))
+                let divert_reg = self.divert.reg(lv.value, &self.cur.func.locations);
+                Some((rc, divert_reg))
             } else {
                 None
             };
