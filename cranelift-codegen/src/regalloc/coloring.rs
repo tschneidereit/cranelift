@@ -893,31 +893,16 @@ impl<'a> Context<'a> {
         debug!("Trying to add a {} reg from {} values", rc, throughs.len());
 
         for lv in throughs {
-            let reg_and_class = if let Affinity::RegClass(rci) = lv.affinity {
-                // The new variable gets to roam the whole top-level register class because it is
-                // not actually constrained by the instruction. We just want it out of the way.
-                let toprc2 = self.reginfo.toprc(rci);
-                let reg2 = self.divert.reg(lv.value, &self.cur.func.locations);
-
-                if rc.contains(reg2) {
-                    Some((toprc2, reg2))
-                } else {
-                    None
-                }
-            } else if let Affinity::RegUnit(reg) = lv.affinity {
-                let rc = self.reginfo.toprc_containing_regunit(reg);
-                let divert_reg = self.divert.reg(lv.value, &self.cur.func.locations);
-                Some((rc, divert_reg))
-            } else {
-                None
-            };
-
-            if let Some((rc, reg)) = reg_and_class {
-                if self.solver.can_add_var(lv.value, rc, reg)
-                    && !self.is_live_on_outgoing_edge(lv.value)
-                {
-                    self.solver.add_through_var(lv.value, rc, reg);
-                    return true;
+            if let Some(preferred_rc) = lv.affinity.toprc_in(&self.reginfo) {
+                let value_reg = self.divert.reg(lv.value, &self.cur.func.locations);
+                if rc.contains(value_reg) {
+                    if self.solver.can_add_var(lv.value, preferred_rc, value_reg)
+                        && !self.is_live_on_outgoing_edge(lv.value)
+                    {
+                        self.solver
+                            .add_through_var(lv.value, preferred_rc, value_reg);
+                        return true;
+                    }
                 }
             }
         }
