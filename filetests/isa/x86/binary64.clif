@@ -602,6 +602,17 @@ ebb0:
     [-,%r8]              v520 = ushr_imm v4, 63   ; bin: 49 c1 e8 3f
 
 
+    ; Rotate immediates
+    ; asm: rolq $12, %rsi
+    [-,%rsi]             v5101 = rotl_imm v2, 12   ; bin: 48 c1 c6 0c
+    ; asm: rolq $13, %r8
+    [-,%r8]              v5102 = rotl_imm v4, 13   ; bin: 49 c1 c0 0d
+    ; asm: rorq $32, %rsi
+    [-,%rsi]             v5103 = rotr_imm v2, 32   ; bin: 48 c1 ce 20
+    ; asm: rorq $33, %r8
+    [-,%r8]              v5104 = rotr_imm v4, 33   ; bin: 49 c1 c8 21
+
+
     ; Load Complex
     [-,%rax]            v521 = iconst.i64 1
     [-,%rbx]            v522 = iconst.i64 1
@@ -679,18 +690,33 @@ ebb0:
     ; asm: testq %rcx, %rcx
     ; asm: je ebb1
     brz v1, ebb1                                ; bin: 48 85 c9 74 1b
+    fallthrough ebb3
+
+ebb3:
     ; asm: testq %rsi, %rsi
     ; asm: je ebb1
     brz v2, ebb1                                ; bin: 48 85 f6 74 16
+    fallthrough ebb4
+
+ebb4:
     ; asm: testq %r10, %r10
     ; asm: je ebb1
     brz v3, ebb1                                ; bin: 4d 85 d2 74 11
+    fallthrough ebb5
+
+ebb5:
     ; asm: testq %rcx, %rcx
     ; asm: jne ebb1
     brnz v1, ebb1                               ; bin: 48 85 c9 75 0c
+    fallthrough ebb6
+
+ebb6:
     ; asm: testq %rsi, %rsi
     ; asm: jne ebb1
     brnz v2, ebb1                               ; bin: 48 85 f6 75 07
+    fallthrough ebb7
+
+ebb7:
     ; asm: testq %r10, %r10
     ; asm: jne ebb1
     brnz v3, ebb1                               ; bin: 4d 85 d2 75 02
@@ -722,24 +748,54 @@ ebb1:
 
     ; asm: je ebb1
     brif eq v11, ebb1                           ; bin: 74 f8
+    jump ebb2
+
+ebb2:
     ; asm: jne ebb1
     brif ne v11, ebb1                           ; bin: 75 f6
+    jump ebb3
+
+ebb3:
     ; asm: jl ebb1
     brif slt v11, ebb1                          ; bin: 7c f4
+    jump ebb4
+
+ebb4:
     ; asm: jge ebb1
     brif sge v11, ebb1                          ; bin: 7d f2
+    jump ebb5
+
+ebb5:
     ; asm: jg ebb1
     brif sgt v11, ebb1                          ; bin: 7f f0
+    jump ebb6
+
+ebb6:
     ; asm: jle ebb1
     brif sle v11, ebb1                          ; bin: 7e ee
+    jump ebb7
+
+ebb7:
     ; asm: jb ebb1
     brif ult v11, ebb1                          ; bin: 72 ec
+    jump ebb8
+
+ebb8:
     ; asm: jae ebb1
     brif uge v11, ebb1                          ; bin: 73 ea
+    jump ebb9
+
+ebb9:
     ; asm: ja ebb1
     brif ugt v11, ebb1                          ; bin: 77 e8
+    jump ebb10
+
+ebb10:
     ; asm: jbe ebb1
     brif ule v11, ebb1                          ; bin: 76 e6
+    jump ebb11
+
+ebb11:
 
     ; asm: sete %bl
     [-,%rbx]            v20 = trueif eq v11                           ; bin: 0f 94 c3
@@ -1237,18 +1293,33 @@ ebb0:
     ; asm: testl %ecx, %ecx
     ; asm: je ebb1x
     brz v1, ebb1                                ; bin: 85 c9 74 18
+    fallthrough ebb3
+
+ebb3:
     ; asm: testl %esi, %esi
     ; asm: je ebb1x
     brz v2, ebb1                                ; bin: 85 f6 74 14
+    fallthrough ebb4
+
+ebb4:
     ; asm: testl %r10d, %r10d
     ; asm: je ebb1x
     brz v3, ebb1                                ; bin: 45 85 d2 74 0f
+    fallthrough ebb5
+
+ebb5:
     ; asm: testl %ecx, %ecx
     ; asm: jne ebb1x
     brnz v1, ebb1                               ; bin: 85 c9 75 0b
+    fallthrough ebb6
+
+ebb6:
     ; asm: testl %esi, %esi
     ; asm: jne ebb1x
     brnz v2, ebb1                               ; bin: 85 f6 75 07
+    fallthrough ebb7
+
+ebb7:
     ; asm: testl %r10d, %r10d
     ; asm: jne ebb1x
     brnz v3, ebb1                               ; bin: 45 85 d2 75 02
@@ -1413,8 +1484,8 @@ function %I64_JT(i64 [%rdi]) {
 ebb0(v0: i64 [%rdi]):
     ; Note: The next two lines will need to change whenever instructions are
     ;        added or removed from this test.
-    [-, %rax]           v1 = jump_table_base.i64 jt0    ; bin: 48 8d 05 00000039
-    [-, %r10]           v2 = jump_table_base.i64 jt0    ; bin: 4c 8d 15 00000032
+    [-, %rax]           v1 = jump_table_base.i64 jt0    ; bin: 48 8d 05 00000039 PCRelRodata4(jt0)
+    [-, %r10]           v2 = jump_table_base.i64 jt0    ; bin: 4c 8d 15 00000032 PCRelRodata4(jt0)
 
     [-, %rbx]           v10 = iconst.i64 1
     [-, %r13]           v11 = iconst.i64 2

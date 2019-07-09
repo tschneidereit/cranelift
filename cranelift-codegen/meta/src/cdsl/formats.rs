@@ -67,6 +67,20 @@ impl fmt::Display for InstructionFormat {
     }
 }
 
+impl InstructionFormat {
+    pub fn imm_by_name(&self, name: &'static str) -> &FormatField {
+        self.imm_fields
+            .iter()
+            .find(|&field| field.member == name)
+            .unwrap_or_else(|| {
+                panic!(
+                    "unexpected immediate field named {} in instruction format {}",
+                    name, self.name
+                )
+            })
+    }
+}
+
 pub struct InstructionFormatBuilder {
     name: &'static str,
     num_value_operands: usize,
@@ -135,7 +149,7 @@ impl InstructionFormatBuilder {
         self
     }
 
-    pub fn finish(self) -> InstructionFormat {
+    pub fn build(self) -> InstructionFormat {
         let typevar_operand = if self.typevar_operand.is_some() {
             self.typevar_operand
         } else if self.has_value_list || self.num_value_operands > 0 {
@@ -200,6 +214,14 @@ impl FormatRegistry {
             .expect("unknown InstructionFormat; please define it in shared/formats.rs first")
     }
 
+    pub fn by_name(&self, name: &str) -> InstructionFormatIndex {
+        self.map
+            .iter()
+            .find(|(_key, value)| value.name == name)
+            .unwrap_or_else(|| panic!("format with name '{}' doesn't exist", name))
+            .0
+    }
+
     pub fn get(&self, index: InstructionFormatIndex) -> &InstructionFormat {
         self.map.get(index).unwrap()
     }
@@ -213,7 +235,7 @@ impl FormatRegistry {
             );
         }
 
-        let format = inst_format.finish();
+        let format = inst_format.build();
 
         // Compute key.
         let imm_keys = format

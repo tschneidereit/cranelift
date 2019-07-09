@@ -25,7 +25,7 @@ use std::collections::HashMap;
 /// instruction results or EBB parameters.
 ///
 /// The layout of EBBs in the function and of instructions in each EBB is recorded by the
-/// `FunctionLayout` data structure which form the other half of the function representation.
+/// `Layout` data structure which forms the other half of the function representation.
 ///
 #[derive(Clone)]
 pub struct DataFlowGraph {
@@ -426,7 +426,7 @@ impl DataFlowGraph {
     }
 
     /// Returns an object that displays `inst`.
-    pub fn display_inst<'a, I: Into<Option<&'a TargetIsa>>>(
+    pub fn display_inst<'a, I: Into<Option<&'a dyn TargetIsa>>>(
         &'a self,
         inst: Inst,
         isa: I,
@@ -909,7 +909,7 @@ impl EbbData {
 }
 
 /// Object that can display an instruction.
-pub struct DisplayInst<'a>(&'a DataFlowGraph, Option<&'a TargetIsa>, Inst);
+pub struct DisplayInst<'a>(&'a DataFlowGraph, Option<&'a dyn TargetIsa>, Inst);
 
 impl<'a> fmt::Display for DisplayInst<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

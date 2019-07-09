@@ -1,6 +1,7 @@
 use crate::cdsl::cpu_modes::CpuMode;
-use crate::cdsl::inst::InstructionGroup;
+use crate::cdsl::instructions::{InstructionGroupBuilder, InstructionPredicateMap};
 use crate::cdsl::isa::TargetIsa;
+use crate::cdsl::recipes::Recipes;
 use crate::cdsl::regs::{IsaRegs, IsaRegsBuilder, RegBankBuilder, RegClassBuilder};
 use crate::cdsl::settings::{SettingGroup, SettingGroupBuilder};
 
@@ -8,7 +9,7 @@ use crate::shared::Definitions as SharedDefinitions;
 
 fn define_settings(_shared: &SettingGroup) -> SettingGroup {
     let setting = SettingGroupBuilder::new("arm64");
-    setting.finish()
+    setting.build()
 }
 
 fn define_registers() -> IsaRegs {
@@ -41,14 +42,20 @@ fn define_registers() -> IsaRegs {
     let builder = RegClassBuilder::new_toplevel("FLAG", flag_reg);
     regs.add_class(builder);
 
-    regs.finish()
+    regs.build()
 }
 
 pub fn define(shared_defs: &mut SharedDefinitions) -> TargetIsa {
     let settings = define_settings(&shared_defs.settings);
     let regs = define_registers();
 
-    let inst_group = InstructionGroup::new("arm64", "arm64 specific instruction set");
+    let inst_group = InstructionGroupBuilder::new(
+        "arm64",
+        "arm64 specific instruction set",
+        &mut shared_defs.all_instructions,
+        &shared_defs.format_registry,
+    )
+    .build();
 
     let mut a64 = CpuMode::new("A64");
 
@@ -58,5 +65,19 @@ pub fn define(shared_defs: &mut SharedDefinitions) -> TargetIsa {
 
     let cpu_modes = vec![a64];
 
-    TargetIsa::new("arm64", inst_group, settings, regs, cpu_modes)
+    // TODO implement arm64 recipes.
+    let recipes = Recipes::new();
+
+    // TODO implement arm64 encodings and predicates.
+    let encodings_predicates = InstructionPredicateMap::new();
+
+    TargetIsa::new(
+        "arm64",
+        inst_group,
+        settings,
+        regs,
+        recipes,
+        cpu_modes,
+        encodings_predicates,
+    )
 }
